@@ -1,4 +1,4 @@
-# Spektografia
+# Spektoskopia
 
 Projekt na PG
 
