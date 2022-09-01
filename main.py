@@ -6,30 +6,36 @@ from algorytm import szukaj, peaks
 
 if __name__ == '__main__':
 
+    # kolory
+    kolory = ['r', 'y', 'g']
+
     # Dziedzina funkcji
-    x = np.arange(-10, 100, 0.5)
+    x = np.arange(0, 500, 0.5)
 
     # Losowe parametry (liczby całkowite)
     p = np.random.randint(1, 70, size=9)
     # p[2] = 100
-    # p[5] = 300
-    # p[8] = 600
-    p = [25, 7, 11, 61, 30, 34, 52,  5, 63]
+    # p[5] = 130
+    # p[8] = 300
+    p = [40,  24, 100,  20,  66, 130,  69,  23, 300]
 
     print(p)
 
-    # Generowanie zbioru wartości
+    # Generowanie zbioru wartości oraz wykresu
     y = np.array([(Gauss(p[0], p[1], p[2], i) + Gauss(p[3], p[4], p[5], i) + Gauss(p[6], p[7], p[8], i))
                  for i in x])
+    mpl.plot(x, y)
 
     # Funkcja szukająca
     parametry = szukaj(x, y)
-    y2 = np.array(
-        [(Gauss(parametry[0], parametry[1], parametry[2], i) + Gauss(parametry[3], parametry[4], parametry[5], i) + Gauss(parametry[6], parametry[7], parametry[8], i)) for i in x])
+    for j in range(len(parametry[0])):
+        y2 = np.array(
+            [(Gauss(parametry[0][j], parametry[1][j], parametry[2][j], i)) for i in x])
+        mpl.plot(x, y2, kolory[j % 3], ls='dashed')
 
     # Wyświetlanie wykresu
-    mpl.plot(x, y)
-    mpl.plot(x, y2, 'g', ls='dashed')
     mpl.show()
 
-    # [25, 7, 11, 61, 30, 34, 52,  5, 63]
+    # [12, 62, 63, 25, 29,  7, 44, 39, 64]
+    # [ 30,  49, 100,  65,  11, 130,  25,  69, 300]
+    # [40,  24, 100,  20,  66, 130,  69,  23, 300]
