@@ -1,95 +1,215 @@
+from types import FunctionType
 import numpy as np
-import gauss as g
 
 
-def polowka_L(x, y, p):
-    yp = y[p]/2
-    xp = x[p]
-    while y[p] > yp:
-        p -= 1
-    return 2*(xp - x[p])
+class mrq(object):
 
+    def __init__(self, x: list, y: list, sig: list, p: list, func: FunctionType):
+        self.__x = np.array(x)  # X
+        self.__y = np.array(y)  # Y
+        self.__sig = np.array(sig)  # Odchylenie standardowe
+        self.__p = np.array(p)  # Parametry
+        self.__func = func  # Funkcja
+        self.__sp = len(p)  # ilość parametrów (ma)
 
-def polowka_P(x, y, p):
-    yp = y[p]/2
-    xp = x[p]
-    while y[p] > yp:
-        p += 1
-    return 2*(x[p] - xp)
+        # wektor holdowanych parametrów (ia) 0 - nie 1 - tak
+        self.__held = np.zeros(len(p))
 
+        self.__alfa = np.zeros((len(p), len(p)))  # macierz alfa
+        self.__sh = len(p)  # ilość nieholdowanych (mfit)
+        self.__sdat = len(x)  # ilość punktów
+        self.__chi2 = 0.0  # chi^2
+        self.__lamb = 0.001
+        self.__MAXITER = 1000
+        self.__covar = np.zeros((len(p), len(p)))
 
-def polowka_S(x, y, p):
-    yp = y[p]/2
-    xp = x[p]
-    pl = p
-    pr = p
-    while y[pl] > yp:
-        pl += 1
-    while y[pr] > yp:
-        pr += 1
-    return 2*(((x[pl]+x[pr])/2) - xp)
+    @property
+    def x(self):
+        return self.__x
 
+    @property
+    def y(self):
+        return self.__y
 
-def peaks(x, y):
-    p = []
-    for i in range(1, len(x)-1):
-        if y[i+1] < y[i] and y[i-1] < y[i]:
-            p.append(i)
-    return p
+    @property
+    def sig(self):
+        return self.__sig
 
+    @property
+    def p(self):
+        return self.__p
 
-def LSM(x, y, p1, p2, p3, NB):
-    LP = 3
-    A = np.zeros((NB*LP, NB*LP))
-    B = np.zeros((NB*LP, 1))
-    for i in range(A.shape[0]):
-        l = 0
-        m = 0
-        for k in range(len(x)):
-            B[i] += (y[k] - g.Gauss(p1[i % 3], p2[i % 3], p3[i % 3], x[k])) * g.dGaussk(p1[i % 3], p2[i % 3],
-                                                                                        p3[i % 3], x[k], i % LP)
-        for j in range(A.shape[1]):
-            print(i % 3, (i+l) % 3, j % 3, (j+m) % 3)
-            for k in range(len(x)):
+    @property
+    def func(self):
+        return self.__func
 
-                A[i, j] += g.dGaussk(p1[(i+l) % 3], p2[(i+l) % 3], p3[(i+l) % 3],
-                                     x[k], i % 3) * g.dGaussk(p1[(j+m) % 3], p2[(j+m) % 3], p3[(j+m) % 3], x[k], j % 3)
-            if j % LP == 2:
-                l += 1
-        if i % LP == 2:
-            m += 1
+    @property
+    def sp(self):
+        return self.__sp
 
-    print(A)
-    sol = np.linalg.inv(A) @ B
-    print(sol)
-    return [1, 1, 1, 1, 1, 1, 1, 1, 1]
+    @property
+    def held(self):
+        return self.__held
 
+    @property
+    def alfa(self):
+        return self.__alfa
 
-def szukaj(x, y):
-    p1 = []
-    p2 = []
-    p3 = []
-    peak = peaks(x, y)
-    for i in peak:
+    @alfa.setter
+    def alfa(self, value):
+        self.__alfa = value
 
-        p1.append(y[i])
+    @property
+    def sh(self):
+        return self.__sh
 
-        if i == peak[0]:
-            p2.append(polowka_L(x, y, i))
-        elif i == peak[-1]:
-            p2.append(polowka_P(x, y, i))
-        else:
-            p2.append(polowka_S(x, y, i))
+    @sh.setter
+    def sh(self, value: int):
+        self.__sh = value
 
-        p3.append(x[i])
+    @property
+    def sdat(self):
+        return self.__sdat
 
-    while len(p1) != 3:
-        p1.append(y[int(len(y)/2)])
+    @property
+    def chi2(self):
+        return self.__chi2
 
-        p2.append(x[int(len(x)/2)]/10)
+    @chi2.setter
+    def chi2(self, value):
+        self.__chi2 = value
 
-        p3.append(x[int(len(x)/2)])
-    print(p1, p2, p3)
+    @property
+    def lamb(self):
+        return self.__lamb
 
-    p = LSM(x, y, p1, p2, p3, 3)
-    return [p1, p2, p3]
+    @lamb.setter
+    def lamb(self, value):
+        self.__lamb = value
+
+    @property
+    def MAXITER(self):
+        return self.__MAXITER
+
+    @lamb.setter
+    def MAXITER(self, value):
+        self.__MAXITER = value
+
+    @property
+    def covar(self):
+        return self.__covar
+
+    @covar.setter
+    def covar(self, value):
+        self.__covar = value
+
+    def covsrt(self, covar):
+        for i in range(self.sh, self.sp):
+            for j in range(0, i+1):
+                covar[i][j] = 0
+                covar[j][i] = 0
+        k = self.sh - 1
+        for j in range(self.sp-1, -1, -1):
+            if self.held[j] == 0:
+                for i in range(self.sp):
+                    covar[i][k], covar[i][j] = covar[i][k], covar[i][j]
+                for i in range(self.sp):
+                    covar[k][i], covar[j][i] = covar[k][i], covar[j][i]
+                k -= 1
+        return covar
+
+    def mqrcof(self, p: np.ndarray, alfa: np.ndarray, beta: np.ndarray):
+        dyda = np.zeros((self.sp, 1))  # wektor pochodnych po parametrow
+        for i in range(self.sh):
+            for j in range(0, i+1):
+                alfa[i][j] = 0.0
+            beta[i] = 0.0
+
+        self.chi2 = 0.0
+
+        for i in range(self.sdat):
+            dyda, ymod = self.func(self.x[i], p)
+            sig2i = 1.0 / (self.sig[i] * self.sig[i])
+            dy = self.y[i] - ymod
+            j = 0
+            for k in range(self.sp):
+                if self.held[k] == 0:
+                    wt = dyda[k]*sig2i
+                    m = 0
+                    for l in range(k+1):
+                        if self.held[l] == 0:
+                            alfa[j][m] += wt * dyda[l]
+                            m += 1
+
+                    beta[j] += dy*wt
+                    j += 1
+            self.chi2 += dy*dy*sig2i
+
+        for i in range(1, self.sh):
+            for j in range(i):
+                alfa[j][i] = alfa[i][j]
+
+        return alfa, beta
+
+    def fit(self):
+
+        ndone = 4
+        done = 0
+        tol = 0.0001
+
+        # zmiena ilości nieholdowanych
+        self.sh = self.sp - np.count_nonzero(self.held == 1)
+        beta = np.zeros((self.sp, 1))  # wektor Beta
+        oneda = np.zeros((self.sp, 1))  # wektor nwm
+        temp = np.zeros((self.sp, self.sp))  # wektor nwm
+        atry = np.zeros((self.sp, 1))  # wektor nwm
+        self.alfa, beta = self.mqrcof(self.p, self.alfa, beta)
+        da = np.zeros((self.sh, 1))
+        for i in range(self.sp):
+            atry[i] = self.p[i]
+        ochi2 = self.chi2
+        for i in range(1000):
+            print(self.chi2)
+            print(self.lamb)
+            if done == ndone:
+                self.lamb = 0.0
+            for j in range(self.sh):
+                for k in range(self.sh):
+                    self.covar[j][k] = self.alfa[j][k]
+                self.covar[j][j] = self.alfa[j][j] * (1.0+self.lamb)
+                for k in range(self.sh):
+                    temp[j][k] = self.covar[j][k]
+                oneda[j] = beta[j]
+            temp = np.linalg.inv(temp)
+            oneda = temp @ oneda
+            for j in range(self.sh):
+                for k in range(self.sh):
+                    self.covar[j][k] = temp[j][k]
+                da[j] = oneda[j][0]
+            if done == ndone:
+                self.covsrt(self.covar)
+                self.covsrt(self.alfa)
+                return
+            l = 0
+            for j in range(self.sp):
+                if self.held[j] == 0:
+                    atry[j] = self.p[j] + da[l]
+                    l += 1
+            self.covar, da = self.mqrcof(atry, self.covar, da)
+            if abs(self.chi2 - ochi2) < max([tol, tol*self.chi2]):
+                done += 1
+            if self.chi2 < ochi2:
+                print('dupa')
+                self.lamb *= 0.1
+                ochi2 = self.chi2
+                for j in range(self.sh):
+                    for k in range(self.sh):
+                        self.alfa[j][k] = self.covar[j][k]
+                    beta[j] = da[j]
+                for j in range(self.sp):
+                    self.p[j] = atry[j]
+            else:
+                print('x')
+                print(done)
+                self.lamb *= 10.0
+                self.chi2 = ochi2
