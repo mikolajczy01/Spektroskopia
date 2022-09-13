@@ -159,57 +159,80 @@ class mrq(object):
 
         # zmiena ilości nieholdowanych
         self.sh = self.sp - np.count_nonzero(self.held == 1)
+
         beta = np.zeros((self.sp, 1))  # wektor Beta
-        oneda = np.zeros((self.sp, 1))  # wektor nwm
-        temp = np.zeros((self.sp, self.sp))  # wektor nwm
         atry = np.zeros((self.sp, 1))  # wektor nwm
+        da = np.zeros((self.sp, 1))
+
         self.alfa, beta = self.mqrcof(self.p, self.alfa, beta)
-        da = np.zeros((self.sh, 1))
+
+        oneda = np.zeros((self.sh, 1))  # wektor nwm
+        temp = np.zeros((self.sh, self.sh))  # wektor nwm
+
         for i in range(self.sp):
             atry[i] = self.p[i]
         ochi2 = self.chi2
+
         for i in range(1000):
-            print(self.chi2)
-            print(self.lamb)
+
             if done == ndone:
                 self.lamb = 0.0
+
             for j in range(self.sh):
+
                 for k in range(self.sh):
                     self.covar[j][k] = self.alfa[j][k]
+
                 self.covar[j][j] = self.alfa[j][j] * (1.0+self.lamb)
+
                 for k in range(self.sh):
                     temp[j][k] = self.covar[j][k]
                 oneda[j] = beta[j]
+
             temp = np.linalg.inv(temp)
             oneda = temp @ oneda
+
             for j in range(self.sh):
                 for k in range(self.sh):
                     self.covar[j][k] = temp[j][k]
                 da[j] = oneda[j][0]
+
             if done == ndone:
                 self.covsrt(self.covar)
                 self.covsrt(self.alfa)
                 return
+
             l = 0
+
             for j in range(self.sp):
                 if self.held[j] == 0:
                     atry[j] = self.p[j] + da[l]
                     l += 1
+
             self.covar, da = self.mqrcof(atry, self.covar, da)
+
             if abs(self.chi2 - ochi2) < max([tol, tol*self.chi2]):
                 done += 1
+
             if self.chi2 < ochi2:
-                print('dupa')
+
                 self.lamb *= 0.1
                 ochi2 = self.chi2
+
                 for j in range(self.sh):
+
                     for k in range(self.sh):
                         self.alfa[j][k] = self.covar[j][k]
                     beta[j] = da[j]
+
                 for j in range(self.sp):
                     self.p[j] = atry[j]
             else:
-                print('x')
-                print(done)
                 self.lamb *= 10.0
                 self.chi2 = ochi2
+
+    def hold(self, x: int):
+        self.__held[x] = 1
+
+    def free(self, x: int):
+        self.held[x] = 0
