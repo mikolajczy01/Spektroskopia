@@ -3,7 +3,6 @@ import matplotlib.pyplot as mpl
 import numpy as np
 from gauss import Gauss
 from algorytm import mrq
-from timeit import default_timer as timer
 
 
 if __name__ == '__main__':
@@ -29,11 +28,6 @@ if __name__ == '__main__':
             except:
                 pass
     f.close()
-start = timer()
 z = mrq(x, y, sig, p, Gauss)
 z.fit()
 print(z.p)
-# mpl.plot(x, y)
-# mpl.plot(x, [Gauss(0.4, 1.8, 27.0, i) for i in x], ls='dashed')
-# mpl.plot(x, [Gauss(0.4, 1.8, 32.0, i) for i in x], ls='dashed')
-# mpl.show()

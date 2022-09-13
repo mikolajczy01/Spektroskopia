@@ -1,3 +1,4 @@
+from json import tool
 from types import FunctionType
 import numpy as np
 
@@ -19,9 +20,11 @@ class mrq(object):
         self.__sh = len(p)  # ilość nieholdowanych (mfit)
         self.__sdat = len(x)  # ilość punktów
         self.__chi2 = 0.0  # chi^2
-        self.__lamb = 0.001
-        self.__MAXITER = 1000
-        self.__covar = np.zeros((len(p), len(p)))
+        self.__lamb = 0.001  # lamda
+        self.__MAXITER = 1000  # ilość pętli
+        self.__covar = np.zeros((len(p), len(p)))  # sigma
+        self.__ndone = 4  # ilość spełnionych warunków
+        self.__tol = 0.0001
 
     @property
     def x(self):
@@ -91,13 +94,29 @@ class mrq(object):
     def MAXITER(self):
         return self.__MAXITER
 
-    @lamb.setter
+    @MAXITER.setter
     def MAXITER(self, value):
         self.__MAXITER = value
 
     @property
     def covar(self):
         return self.__covar
+
+    @property
+    def ndone(self):
+        return self.__ndone
+
+    @ndone.setter
+    def ndone(self, value):
+        self.__ndone = value
+
+    @property
+    def tol(self):
+        return self.__tol
+
+    @tol.setter
+    def tol(self, value):
+        self.__tol = value
 
     @covar.setter
     def covar(self, value):
@@ -119,7 +138,8 @@ class mrq(object):
         return covar
 
     def mqrcof(self, p: np.ndarray, alfa: np.ndarray, beta: np.ndarray):
-        dyda = np.zeros((self.sp, 1))  # wektor pochodnych po parametrow
+        dyda = np.zeros((self.sp, 1))  # wektor pochodnych po parametrach
+
         for i in range(self.sh):
             for j in range(0, i+1):
                 alfa[i][j] = 0.0
@@ -153,9 +173,8 @@ class mrq(object):
 
     def fit(self):
 
-        ndone = 4
         done = 0
-        tol = 0.0001
+        self.tol = 0.0001
 
         # zmiena ilości nieholdowanych
         self.sh = self.sp - np.count_nonzero(self.held == 1)
@@ -175,7 +194,7 @@ class mrq(object):
 
         for i in range(1000):
 
-            if done == ndone:
+            if done == self.ndone:
                 self.lamb = 0.0
 
             for j in range(self.sh):
@@ -197,7 +216,7 @@ class mrq(object):
                     self.covar[j][k] = temp[j][k]
                 da[j] = oneda[j][0]
 
-            if done == ndone:
+            if done == self.ndone:
                 self.covsrt(self.covar)
                 self.covsrt(self.alfa)
                 return
@@ -211,7 +230,7 @@ class mrq(object):
 
             self.covar, da = self.mqrcof(atry, self.covar, da)
 
-            if abs(self.chi2 - ochi2) < max([tol, tol*self.chi2]):
+            if abs(self.chi2 - ochi2) < max([self.tol, self.tol*self.chi2]):
                 done += 1
 
             if self.chi2 < ochi2:
