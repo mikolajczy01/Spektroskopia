@@ -1,3 +1,4 @@
+from faulthandler import disable
 import matplotlib.pyplot as mpl
 import numpy as np
 from gauss import Gauss
@@ -12,10 +13,16 @@ def okno1():
         [sg.Text("Wybierz funkcję opisującą rozkład: ")],
         [sg.Radio('Funkcje Gaussa', "-RADIO1-", default=True)],
         [sg.Radio('Pochodne Funkcji Gaussa', "-RADIO1-")],
-        [sg.Button("Dalej", key='-FUN-')]
+        [sg.Text("Wybierz pliki: ")],
+        [sg.FileBrowse('Współrzędne', target=(sg.ThisRow, 1), size=(13, None)),
+         sg.InputText(key="-COORD-", size=(30, None))],
+        [sg.FileBrowse('Parametry', target=(sg.ThisRow, 1), size=(13, None)),
+         sg.InputText(key='-PARA-', size=(30, None))],
+        [sg.Text()],
+        [sg.Button("Dalej", key='-FUN-', disabled=True)]
     ]
 
-    return sg.Window('Spektroskopia', layout, size=(400, 200), element_justification='c', font=12)
+    return sg.Window('Spektroskopia', layout, font=12)
 
 
 def okno2():
@@ -23,9 +30,11 @@ def okno2():
 
     second_col = [[sg.Text("essa")]]
 
-    layout = [[sg.Column(first_col), sg.VSeparator(), sg.Column(second_col)]]
+    layout = [
+        [sg.Column(first_col), sg.VSeparator(), sg.Column(second_col)]
+    ]
 
-    return sg.Window("Demo", layout, size=(1000, 677))
+    return sg.Window("Spektroskopia", layout, size=(1000, 677))
 
 
 if __name__ == '__main__':
@@ -34,9 +43,15 @@ if __name__ == '__main__':
 
     while True:
         event, values = window.read()
+
+        if values["-COORD-"]:
+            print('essa')
+            window['-FUN-'].update(disabled=False)
+
         if event == "-FUN-":
             window.close()
             window = okno2()
+
         if event == sg.WIN_CLOSED:
             break
 
